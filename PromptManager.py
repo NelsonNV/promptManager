@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QListWidget, QMessageBox, QLabel, QDialog, QLineEdit, QDialogButtonBox
 from PyQt5.QtGui import QClipboard
@@ -45,6 +46,10 @@ class PromptListForm(QWidget):
         self.prompt_list = QListWidget()
         self.prompt_list.itemClicked.connect(self.show_prompt)
 
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("Buscar por nombre...")
+        self.search_edit.textChanged.connect(self.search_prompt)
+
         self.prompt_text_edit = QTextEdit()
         self.prompt_text_edit.setReadOnly(True)
 
@@ -73,6 +78,7 @@ class PromptListForm(QWidget):
         right_layout = QVBoxLayout()
 
         left_layout.addWidget(QLabel("Nombres disponibles:"))
+        left_layout.addWidget(self.search_edit)
         left_layout.addWidget(self.prompt_list)
         left_layout.addWidget(self.edit_button)
         left_layout.addWidget(self.delete_button)
@@ -147,14 +153,28 @@ class PromptListForm(QWidget):
             self.populate_list()
             self.save_data()
 
+    def search_prompt(self, text):
+        if text:
+            filtered_data = self.data[self.data["name"].str.contains(text, case=False)]
+            self.populate_list_with_filtered_data(filtered_data)
+        else:
+            self.populate_list()
+
+    def populate_list_with_filtered_data(self, filtered_data):
+        self.prompt_list.clear()
+        for index, row in filtered_data.iterrows():
+            self.prompt_list.addItem(row["name"])
+
     def save_data(self):
         self.data.to_csv("datos.csv", index=False)
 
 
 if __name__ == "__main__":
     app = QApplication([])
+    if not os.path.isfile("datos.csv"):
+        empty_df = pd.DataFrame(columns=["name", "prompt", "negative_prompt"])
+        empty_df.to_csv("datos.csv", index=False)
     data = pd.read_csv("datos.csv")
     form = PromptListForm(data)
     form.show()
     app.exec_()
-
